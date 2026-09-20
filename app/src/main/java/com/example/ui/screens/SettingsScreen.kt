@@ -718,12 +718,13 @@ Secure local ledger backup from Trisakti Traders App.
                             }
 
                             isSubmitting = true
-                            val result = viewModel.changePassword(currentPwd, newPwd)
-                            isSubmitting = false
-                            if (result.isSuccess) {
-                                showChangePasswordDialog = false
-                            } else {
-                                errorMsg = result.exceptionOrNull()?.message ?: "Failed to update password."
+                            viewModel.changePassword(newPwd) { result ->
+                                isSubmitting = false
+                                if (result.isSuccess) {
+                                    showChangePasswordDialog = false
+                                } else {
+                                    errorMsg = result.exceptionOrNull()?.message ?: "Failed to update password."
+                                }
                             }
                         },
                         enabled = !isSubmitting,
