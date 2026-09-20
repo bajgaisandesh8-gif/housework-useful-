@@ -35,10 +35,10 @@ class TrisaktiViewModel(application: Application) : AndroidViewModel(application
 
     private val database = TrisaktiDatabase.getDatabase(application)
     private val repository = TrisaktiRepository(database)
-    private val securityManager = SecurityManager(application)
+    private val securityManager = SecurityManager()
 
     // Authentication session state (strictly 2 authorized accounts: Sandesh & Father)
-    private val _currentUser = MutableStateFlow<AuthUser?>(securityManager.getActiveSession())
+    private val _currentUser = MutableStateFlow<AuthUser?>(null)
     val currentUser: StateFlow<AuthUser?> = _currentUser.asStateFlow()
 
     private val _isLoggedIn = MutableStateFlow(_currentUser.value != null)
@@ -94,7 +94,12 @@ class TrisaktiViewModel(application: Application) : AndroidViewModel(application
 
     init {
         viewModelScope.launch {
-            repository.checkAndSeedInitialData()
+            _currentUser.value = securityManager.getActiveSession()
+            _isLoggedIn.value = _currentUser.value != null
+            if (_currentUser.value != null) {
+                runCatching { repository.refresh() }
+                    .onFailure { _messageEvents.emit("Unable to sync business records. Check your connection.") }
+            }
         }
     }
 
@@ -510,46 +515,42 @@ class TrisaktiViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /**
-     * Authenticates an authorized family business user.
-     */
-    fun login(emailOrId: String, passkey: String): Result<AuthUser> {
-        val result = securityManager.authenticate(emailOrId, passkey)
-        if (result.isSuccess) {
-            val user = result.getOrNull()
-            _currentUser.value = user
-            _isLoggedIn.value = true
-            viewModelScope.launch {
-                _messageEvents.emit("Welcome back, ${user?.name}!")
+    fun login(emailOrId: String, passkey: String, onComplete: (Result<AuthUser>) -> Unit) {
+        viewModelScope.launch {
+            val result = securityManager.authenticate(emailOrId, passkey)
+            if (result.isSuccess) {
+                val user = result.getOrNull()
+                _currentUser.value = user
+                _isLoggedIn.value = true
+                runCatching { repository.refresh() }
+                _messageEvents.emit("Welcome back, " + (user?.name ?: "user") + "!")
             }
+            onComplete(result)
         }
-        return result
     }
 
-    /**
-     * Securely changes the user's password and updates the session state.
-     */
-    fun changePassword(currentPasskey: String, newPasskey: String): Result<Unit> {
-        val user = _currentUser.value ?: return Result.failure(Exception("No active session."))
-        val result = securityManager.changePassword(user.id, currentPasskey, newPasskey)
-        if (result.isSuccess) {
-            _currentUser.value = user.copy(requiresPasswordChange = false)
-            viewModelScope.launch {
+    fun changePassword(newPasskey: String, onComplete: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val user = _currentUser.value
+            if (user == null) {
+                onComplete(Result.failure(Exception("No active session.")))
+                return@launch
+            }
+            val result = securityManager.changePassword(newPasskey)
+            if (result.isSuccess) {
+                _currentUser.value = user.copy(requiresPasswordChange = false)
                 _messageEvents.emit("Password successfully changed.")
             }
+            onComplete(result)
         }
-        return result
     }
 
-    /**
-     * Terminates the active business session and wipes memory state.
-     */
     fun logout() {
-        securityManager.logout()
-        _currentUser.value = null
-        _isLoggedIn.value = false
-        _selectedCustomer.value = null
         viewModelScope.launch {
+            securityManager.logout()
+            _currentUser.value = null
+            _isLoggedIn.value = false
+            _selectedCustomer.value = null
             _messageEvents.emit("Logged out securely. Session ended.")
         }
     }
