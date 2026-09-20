@@ -59,7 +59,7 @@ class SecurityManager(context: Context) {
         val ARJUN_USER = AuthUser(
             id = "auth_arjun_02",
             name = "Arjun Prasad Bajgai",
-            email = "arjunbajgai@trisakti.com",
+            email = "arjunbajgai7@gmail.com",
             role = "STORE PROPRIETOR & OWNER",
             title = "Store Owner & Chief Operator",
             avatarRes = null
