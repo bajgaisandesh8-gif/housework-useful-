@@ -328,9 +328,11 @@ fun LoginScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 if (passkey.isNotBlank()) {
-                                    val result = viewModel.login(selectedUser.id, passkey)
-                                    if (result.isFailure) {
-                                        errorMessage = "Invalid credentials or unauthorized account. Access restricted."
+                                    viewModel.login(selectedUser.email, passkey) { result ->
+                                        isSubmitting = false
+                                        if (result.isFailure) {
+                                            errorMessage = "Invalid credentials or unauthorized account. Access restricted."
+                                        }
                                     }
                                 }
                             }
@@ -388,10 +390,11 @@ fun LoginScreen(
                                 return@Button
                             }
                             isSubmitting = true
-                            val result = viewModel.login(selectedUser.id, passkey)
-                            isSubmitting = false
-                            if (result.isFailure) {
-                                errorMessage = "Invalid credentials or unauthorized account. Access restricted to authorized business accounts."
+                            viewModel.login(selectedUser.email, passkey) { result ->
+                                isSubmitting = false
+                                if (result.isFailure) {
+                                    errorMessage = "Invalid credentials or unauthorized account. Access restricted to authorized business accounts."
+                                }
                             }
                         },
                         enabled = !isSubmitting,
