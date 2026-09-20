@@ -1,0 +1,6 @@
+{
+  "name": "Trisakti Traders",
+  "description": "Mobile-first business management system for Trisakti Traders in Nepal. Track daily sales, costs, expenses, estimated profits, credit (udhaar) ledger, and daily cash closing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
