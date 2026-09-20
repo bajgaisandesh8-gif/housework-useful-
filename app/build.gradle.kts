@@ -3,6 +3,7 @@ import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesS
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
+  alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
@@ -65,6 +66,19 @@ android {
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) localPropertiesFile.inputStream().use { localProperties.load(it) }
+
+android {
+  defaultConfig {
+    buildConfigField("String", "SUPABASE_URL", "\"\${localProperties.getProperty("SUPABASE_URL", "")}\"")
+    buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"\${localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")}\"")
+  }
+}
+
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
@@ -114,6 +128,11 @@ dependencies {
   implementation(libs.firebase.appcheck.debug)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
+  implementation(platform("io.github.jan-tennert.supabase:bom:\${libs.versions.supabase.get()}"))
+  implementation("io.github.jan-tennert.supabase:auth-kt")
+  implementation("io.github.jan-tennert.supabase:postgrest-kt")
+  implementation("io.ktor:ktor-client-android:\${libs.versions.ktor.get()}")
+  implementation("io.ktor:ktor-client-core:\${libs.versions.ktor.get()}")
   implementation(libs.logging.interceptor)
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
